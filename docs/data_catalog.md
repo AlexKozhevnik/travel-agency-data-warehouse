@@ -172,12 +172,17 @@ It consists of **dimension tables** and a **fact table** representing key busine
 | payment_date_key | INT | FK → `gold.dim_date` |
 | total_nights | INT | Number of hotel nights |
 | pax | INT | Number of guests |
-| net_price | DECIMAL(18,2) | Price paid by the agency to the hotel |
-| agency_price | DECIMAL(18,2) | Price charged by the agency |
-| invoice_sum | DECIMAL(18,2) | Invoice amount to the customer |
-| paid | DECIMAL(18,2) | Paid amount |
-| outstanding_amount | DECIMAL(18,2) | Remaining amount to be paid before `due_date_key` |
-| profit | DECIMAL(18,2) | Financial profit per booking |
+| netto_price | DECIMAL(10,2) | Price paid by the agency to the hotel |
+| price | DECIMAL(10,2) | Price paid by customer to the agency |
+| one_night_price | DECIMAL(10,2) | cost of one night in a hotel |
+| agency_price | DECIMAL(10,2) | Price charged by the agency |
+| invoice_sum | DECIMAL(10,2) | Invoice amount to the customer |
+| invoice_sum_eur | DECIMAL(10,2) | Invoice amount to the customer, normalized for EUR currency only |
+| paid | DECIMAL(10,2) | Paid amount |
+| rest_tu_pay | DECIMAL(10,2) | Remaining amount to be paid before `due_date_key` |
+| profit | DECIMAL(10,2) | Financial profit per booking |
+| profit_clean | DECIMAL(10,2) | Financial profit per booking with one some corrections |
+| additional_services | DECIMAL(10,2) | Amount of additional services provided to the customer |
 | number | NVARCHAR(50) | Sequential reservation number |
 | reservation_number | NVARCHAR(50) | System reservation ID |
 | common_number | NVARCHAR(50) | Unique reservation identifier |
@@ -185,6 +190,7 @@ It consists of **dimension tables** and a **fact table** representing key busine
 | invoice_number | NVARCHAR(250) | Invoice ID provided to the customer |
 | invoice_proforma | NVARCHAR(250) | Proforma invoice ID |
 | invoice_total | NVARCHAR(250) | Final accounting invoice ID |
+| normal_price_flag | BIT | A special column that takes into account a number of indicators and eliminates errors in reservations. |
 
 ---
 

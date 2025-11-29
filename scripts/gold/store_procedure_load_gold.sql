@@ -1,10 +1,11 @@
-/*
-	STORE PROCEDURE which load data from Silver Layer to all dim. and fact. tables in GOLD LAYER
-
-	How to execute: EXEC gold.load_gold
-	How to control logs: SELECT * FROM gold.load_logs
-*/
-CREATE OR ALTER PROCEDURE gold.load_gold AS
+USE [ItoDataWarehouse]
+GO
+/****** Object:  StoredProcedure [gold].[load_gold]    Script Date: 29.11.2025 13:41:46 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER   PROCEDURE [gold].[load_gold] AS
 BEGIN
 	DECLARE	@start_time DATETIME, @end_time DATETIME;
 	DECLARE @rows_loaded INT;
@@ -728,19 +729,30 @@ BEGIN
 			pax,
 			netto_price,
 			price,
+			one_night_price,
 			agency_price,
 			invoice_sum,
+			invoice_sum_eur,
 			paid,
 			rest_to_pay,
 			profit,
+			profit_clean,
+			additional_services,
 			number,
 			reservation_number,
 			common_number,
 			notes,
 			invoice_number,
 			invoice_proforma,
-			invoice_total
+			invoice_total,
+			normal_price_flag
 		)
+		SELECT
+		*,
+		CASE WHEN one_night_price < 60 AND status_key = 3 AND service_key = 2 THEN 0
+		ELSE 1
+		END AS normal_price_flag
+		FROM (
 		SELECT
 			ser.service_key,
 			hot.hotel_key,
@@ -764,11 +776,32 @@ BEGIN
 			sil.pax,
 			sil.netto_price,
 			sil.price,
+			ISNULL(CAST(
+			CASE	WHEN sil.currency = 'CZK' 
+					THEN sil.invoice_sum / 24.5 
+					ELSE sil.invoice_sum 
+			END / NULLIF(sil.total_nights, 0) AS DECIMAL(10, 2)), 0) AS one_night_price,
 			sil.agency_price,
 			sil.invoice_sum,
+			CAST(
+			CASE	WHEN sil.currency = 'CZK' 
+					THEN sil.invoice_sum / 24.5 
+					ELSE sil.invoice_sum 
+			END AS DECIMAL(10,2)) AS invoice_sum_eur,
 			sil.paid,
 			sil.rest_to_pay,
 			sil.profit,
+			CAST(
+			CASE	WHEN	sil.hotel LIKE 'KARLSBAD GRANDE%' OR 
+							sil.hotel LIKE 'FESTIVAL%' OR 
+							sil.hotel LIKE 'JEAN DE%' THEN sil.total_nights * 4
+					ELSE sil.profit 
+			END AS DECIMAL(10,2)) AS profit_clean,
+			CAST(
+			CASE	WHEN sil.currency = 'CZK' 
+					THEN sil.invoice_sum / 24.5 
+					ELSE sil.invoice_sum 
+			END AS DECIMAL(10,2)) - CAST(sil.price AS DECIMAL(10,2)) AS additional_services,
 			sil.number,
 			sil.reservation_number,
 			sil.common_number,
@@ -812,7 +845,7 @@ BEGIN
 		LEFT JOIN gold.dim_date d_da
 		ON sil.due_date = d_da.full_date
 		LEFT JOIN gold.dim_date d_pay
-		ON sil.payment_date = d_pay.full_date;
+		ON sil.payment_date = d_pay.full_date) t;
 
 		SET @rows_loaded = @@ROWCOUNT;
 		SET @end_time = GETDATE();

@@ -36,7 +36,7 @@ BEGIN
 
 		SET @PipelineDuration = DATEDIFF(SECOND, @PipelineStartTime, GETDATE());
 		PRINT '========================================================================================';
-		PRINT 'DWH ETL PIPELINE SUCCESS. Duration: ' + CAST(@PipelineDuration AS NVARCHAR) + ' secinds.';
+		PRINT 'DWH ETL PIPELINE SUCCESS. Duration: ' + CAST(@PipelineDuration AS NVARCHAR) + ' seconds.';
 		PRINT '========================================================================================';
 	END TRY
 

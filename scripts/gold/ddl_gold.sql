@@ -69,8 +69,15 @@ IF OBJECT_ID('gold.dim_agencies', 'U') IS NOT NULL
 	DROP TABLE gold.dim_agencies
 CREATE TABLE gold.dim_agencies (
 	agency_key INT PRIMARY KEY IDENTITY(1,1),
-	agency_city_key INT NOT NULL,
 	agency_name NVARCHAR(100) NOT NULL
+);
+
+ -- create table gold.dim_agency_city
+IF OBJECT_ID('gold.dim_agency_city', 'U') IS NOT NULL
+	DROP TABLE gold.dim_agency_city
+CREATE TABLE gold.dim_agency_city (
+	agency_city_key INT PRIMARY KEY IDENTITY(1,1),
+	agency_city_name NVARCHAR(100) NOT NULL
 );
 
  -- create table gold.dim_customers

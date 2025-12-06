@@ -44,6 +44,7 @@ IF OBJECT_ID('gold.dim_hotels', 'U') IS NOT NULL
 	DROP TABLE gold.dim_hotels
 CREATE TABLE gold.dim_hotels (
 	hotel_key INT PRIMARY KEY IDENTITY(1,1),
+	hotel_city_key INT,
 	hotel_name NVARCHAR(50) NOT NULL
 );
 
@@ -68,6 +69,7 @@ IF OBJECT_ID('gold.dim_agencies', 'U') IS NOT NULL
 	DROP TABLE gold.dim_agencies
 CREATE TABLE gold.dim_agencies (
 	agency_key INT PRIMARY KEY IDENTITY(1,1),
+	agency_city_key INT NOT NULL,
 	agency_name NVARCHAR(100) NOT NULL
 );
 
@@ -141,6 +143,7 @@ CREATE TABLE gold.fact_bookings (
 	room_key INT NOT NULL,
 	meal_type_key INT NOT NULL,
 	agency_key INT NOT NULL,
+	agency_city_key INT NOT NULL,
 	customer_key INT NOT NULL,
 	status_key INT NOT NULL,
 	manager_key INT NOT NULL,
@@ -162,7 +165,9 @@ CREATE TABLE gold.fact_bookings (
 	invoice_sum DECIMAL(10, 2),
 	invoice_sum_eur DECIMAL(10, 2),
 	paid DECIMAL(10, 2),
+	paid_eur DECIMAL(10, 2),
 	rest_to_pay DECIMAL(10, 2),
+	rest_to_pay_eur DECIMAL(10, 2),
 	profit DECIMAL(10, 2),
 	profit_clean DECIMAL(10, 2),
 	additional_services DECIMAL(10, 2),

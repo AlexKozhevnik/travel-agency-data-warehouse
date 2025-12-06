@@ -10,7 +10,7 @@ Thist store procedure performs the ETL process to populate the silver table from
 How to execute: EXEC silver.load_silver
 */
 
-CREATE OR ALTER PROCEDURE silver.load_silver AS
+ALTER   PROCEDURE [silver].[load_silver] AS
 BEGIN
 	DECLARE @start_time DATETIME, @end_time DATETIME;
 	DECLARE @rows_loaded INT;
@@ -42,7 +42,8 @@ BEGIN
 			meal_type,
 			notes,
 			rn,
-			agency,
+			agency_name,
+			agency_city,
 			tourists,
 			status,
 			ref_number,
@@ -101,11 +102,29 @@ BEGIN
 			ISNULL(TRIM(notes), 'n/a') AS notes,
 			ISNULL(rn, 'n/a') AS rn,
 			-- Standardization of customer group names
-			CASE	WHEN agency = 'INDIVIDUALS' THEN 'INDIVIDUAL'
-					WHEN agency = 'INDIVIDUAL/MOSKVA' THEN 'INDIVIDUAL'
-					WHEN agency = 'INDIVIDUAL*' THEN 'INDIVIDUAL'
-					ELSE agency
-			END AS agency,
+			REPLACE(CASE
+				WHEN REPLACE(REPLACE(REPLACE(REPLACE(agency, '*', ''), '/ ', '_'), ' /', '_'), '/', '_') 
+					 IN ('INDIVIDUALS', 'INDIVIDUAL/MOSKVA') 
+					 OR REPLACE(REPLACE(REPLACE(REPLACE(agency, '*', ''), '/ ', '_'), ' /', '_'), '/', '_') LIKE 'INDIVIDUAL%'
+				THEN 'INDIVIDUAL'
+				WHEN CHARINDEX('_', REPLACE(REPLACE(REPLACE(REPLACE(agency, '*', ''), '/ ', '_'), ' /', '_'), '/', '_')) > 0
+				THEN 
+					LEFT(
+						REPLACE(REPLACE(REPLACE(REPLACE(agency, '*', ''), '/ ', '_'), ' /', '_'), '/', '_'),
+						CHARINDEX('_', REPLACE(REPLACE(REPLACE(REPLACE(agency, '*', ''), '/ ', '_'), ' /', '_'), '/', '_')) - 1
+					)
+				ELSE REPLACE(REPLACE(REPLACE(REPLACE(agency, '*', ''), '/ ', '_'), ' /', '_'), '/', '_')
+			END, '))', ')') AS agency_name,
+			CASE
+				WHEN CHARINDEX('_', REPLACE(REPLACE(REPLACE(REPLACE(agency, '*', ''), '/ ', '_'), ' /', '_'), '/', '_')) > 0
+				THEN 
+					SUBSTRING(
+						REPLACE(REPLACE(REPLACE(REPLACE(agency, '*', ''), '/ ', '_'), ' /', '_'), '/', '_'),
+						CHARINDEX('_', REPLACE(REPLACE(REPLACE(REPLACE(agency, '*', ''), '/ ', '_'), ' /', '_'), '/', '_')) + 1,
+						LEN(REPLACE(REPLACE(REPLACE(REPLACE(agency, '*', ''), '/ ', '_'), ' /', '_'), '/', '_'))
+					)
+				ELSE 'n/a'
+			END AS agency_city,
 			-- Removing unnecessary system tags from client names
 			TRIM(ISNULL(CASE
 							WHEN TRIM(tourists) LIKE '%Dite%' THEN 'System name'

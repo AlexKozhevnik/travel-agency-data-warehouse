@@ -124,10 +124,19 @@ BEGIN
 		PRINT '---------------------------------------';
 
 		INSERT INTO gold.dim_cities (city)
-		SELECT DISTINCT
-			city
-		FROM silver.ito
-		WHERE city IS NOT NULL;
+		SELECT T.city
+		FROM (
+			SELECT city 
+			FROM silver.ito
+			WHERE city IS NOT NULL
+			
+			UNION
+
+			SELECT agency_city
+			FROM silver.ito
+			WHERE agency_city IS NOT NULL
+		) AS T
+		WHERE T.city IS NOT NULL
 
 		SET @rows_loaded = @@ROWCOUNT;
 		SET @end_time = GETDATE();
@@ -170,10 +179,13 @@ BEGIN
 		PRINT ' === INSERT DATA INTO gold.dim_hotels';
 		PRINT '---------------------------------------';
 
-		INSERT INTO gold.dim_hotels (hotel_name)
+		INSERT INTO gold.dim_hotels (hotel_name, hotel_city_key)
 		SELECT DISTINCT
-			hotel
-		FROM silver.ito
+			h.hotel,
+			c.city_key
+		FROM silver.ito h
+		LEFT JOIN gold.dim_cities c
+		ON h.city = c.city
 		WHERE hotel IS NOT NULL;
 
 		SET @rows_loaded = @@ROWCOUNT;
@@ -311,11 +323,14 @@ BEGIN
 		PRINT ' === INSERT DATA INTO gold.dim_agencies';
 		PRINT '---------------------------------------';
 
-		INSERT INTO gold.dim_agencies (agency_name)
+		INSERT INTO gold.dim_agencies (agency_name, agency_city_key)
 		SELECT DISTINCT
-			agency 
-		FROM silver.ito
-		WHERE agency IS NOT NULL;
+			a.agency_name,
+			c.city_key
+		FROM silver.ito a
+		LEFT JOIN gold.dim_cities c
+		ON a.agency_city = c.city
+		WHERE agency_name IS NOT NULL;
 
 		SET @rows_loaded = @@ROWCOUNT;
 		SET @end_time = GETDATE();
@@ -713,6 +728,7 @@ BEGIN
 			room_key,
 			meal_type_key,
 			agency_key,
+			agency_city_key,
 			customer_key,
 			status_key,
 			manager_key,
@@ -734,7 +750,9 @@ BEGIN
 			invoice_sum,
 			invoice_sum_eur,
 			paid,
+			paid_eur,
 			rest_to_pay,
+			rest_to_pay_eur,
 			profit,
 			profit_clean,
 			additional_services,
@@ -760,6 +778,7 @@ BEGIN
 			ro.room_key,
 			mt.meal_type_key,
 			ag.agency_key,
+			ag.agency_city_key,
 			cus.customer_key,
 			os.status_key,
 			man.manager_key,
@@ -789,7 +808,16 @@ BEGIN
 					ELSE sil.invoice_sum 
 			END AS DECIMAL(10,2)) AS invoice_sum_eur,
 			sil.paid,
+			CAST(
+			CASE	WHEN sil.currency = 'CZK' 
+					THEN sil.paid / 24.5 
+					ELSE sil.paid 
+			END AS DECIMAL(10,2)) AS paid_eur,
 			sil.rest_to_pay,
+			CAST(CASE	WHEN sil.currency = 'CZK' 
+					THEN sil.rest_to_pay / 24.5 
+					ELSE sil.rest_to_pay 
+			END AS DECIMAL(10,2)) AS rest_to_pay_eur,
 			sil.profit,
 			CAST(
 			CASE	WHEN	sil.hotel LIKE 'KARLSBAD GRANDE%' OR 
@@ -823,7 +851,7 @@ BEGIN
 		LEFT JOIN gold.dim_meal_type mt
 		ON sil.meal_type = mt.meal_type_name
 		LEFT JOIN gold.dim_agencies ag
-		ON sil.agency = ag.agency_name
+		ON sil.agency_name = ag.agency_name
 		LEFT JOIN gold.dim_customers cus
 		ON sil.tourists = cus.customer
 		LEFT JOIN gold.dim_order_status os

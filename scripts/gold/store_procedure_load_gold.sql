@@ -1,10 +1,3 @@
-USE [ItoDataWarehouse]
-GO
-/****** Object:  StoredProcedure [gold].[load_gold]    Script Date: 29.11.2025 13:41:46 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER   PROCEDURE [gold].[load_gold] AS
 BEGIN
 	DECLARE	@start_time DATETIME, @end_time DATETIME;
@@ -124,19 +117,9 @@ BEGIN
 		PRINT '---------------------------------------';
 
 		INSERT INTO gold.dim_cities (city)
-		SELECT T.city
-		FROM (
-			SELECT city 
-			FROM silver.ito
-			WHERE city IS NOT NULL
-			
-			UNION
-
-			SELECT agency_city
-			FROM silver.ito
-			WHERE agency_city IS NOT NULL
-		) AS T
-		WHERE T.city IS NOT NULL
+		SELECT DISTINCT city
+		FROM silver.ito
+		WHERE city IS NOT NULL;
 
 		SET @rows_loaded = @@ROWCOUNT;
 		SET @end_time = GETDATE();
@@ -179,13 +162,10 @@ BEGIN
 		PRINT ' === INSERT DATA INTO gold.dim_hotels';
 		PRINT '---------------------------------------';
 
-		INSERT INTO gold.dim_hotels (hotel_name, hotel_city_key)
+		INSERT INTO gold.dim_hotels (hotel_name)
 		SELECT DISTINCT
-			h.hotel,
-			c.city_key
-		FROM silver.ito h
-		LEFT JOIN gold.dim_cities c
-		ON h.city = c.city
+			hotel
+		FROM silver.ito
 		WHERE hotel IS NOT NULL;
 
 		SET @rows_loaded = @@ROWCOUNT;
@@ -323,13 +303,10 @@ BEGIN
 		PRINT ' === INSERT DATA INTO gold.dim_agencies';
 		PRINT '---------------------------------------';
 
-		INSERT INTO gold.dim_agencies (agency_name, agency_city_key)
+		INSERT INTO gold.dim_agencies (agency_name)
 		SELECT DISTINCT
-			a.agency_name,
-			c.city_key
-		FROM silver.ito a
-		LEFT JOIN gold.dim_cities c
-		ON a.agency_city = c.city
+			agency_name
+		FROM silver.ito
 		WHERE agency_name IS NOT NULL;
 
 		SET @rows_loaded = @@ROWCOUNT;
@@ -728,7 +705,6 @@ BEGIN
 			room_key,
 			meal_type_key,
 			agency_key,
-			agency_city_key,
 			customer_key,
 			status_key,
 			manager_key,
@@ -778,7 +754,6 @@ BEGIN
 			ro.room_key,
 			mt.meal_type_key,
 			ag.agency_key,
-			ag.agency_city_key,
 			cus.customer_key,
 			os.status_key,
 			man.manager_key,
@@ -844,8 +819,8 @@ BEGIN
 		ON sil.service_type = ser.service_type
 		LEFT JOIN gold.dim_cities cit
 		ON sil.city = cit.city
-		LEFT JOIN gold.dim_hotels hot
-		ON sil.hotel = hot.hotel_name
+		LEFT JOIN gold.dim_hotels hot 
+		ON sil.hotel = hot.hotel_name 
 		LEFT JOIN gold.dim_rooms ro
 		ON sil.room_category = ro.room_name
 		LEFT JOIN gold.dim_meal_type mt
@@ -897,6 +872,53 @@ BEGIN
 
 		INSERT INTO gold.load_logs (table_name, source_name, number_of_rows, duration_seconds, status, error_message)
 		VALUES('gold.fact_bookings', 'silver.ito', 0, @duration_sec, 'ERROR', 'Error: ' + CAST(ERROR_NUMBER() AS NVARCHAR) + ': ' + ERROR_MESSAGE());
+		THROW;
+	END CATCH
+
+	BEGIN TRY 
+		PRINT '===================================================';
+		PRINT 'Load Gold Table gold.dim_agency_city from Silver Layer';
+		PRINT '===================================================';
+
+		SET @start_time = GETDATE();
+		PRINT '--------------------------------------';
+		PRINT '>>> Truncate table gold.dim_agency_city';
+		PRINT '--------------------------------------';
+
+		TRUNCATE TABLE gold.dim_agency_city;
+
+		PRINT '---------------------------------------';
+		PRINT ' === INSERT DATA INTO gold.dim_agency_city';
+		PRINT '---------------------------------------';
+
+		INSERT INTO gold.dim_agency_city (agency_city_name)
+		SELECT DISTINCT
+			agency_city
+		FROM silver.ito
+		WHERE agency_city IS NOT NULL;
+
+		SET @rows_loaded = @@ROWCOUNT;
+		SET @end_time = GETDATE();
+		SET @duration_sec = DATEDIFF(SECOND, @start_time, @end_time);
+		PRINT '-- Load Duration: ' + CAST(@duration_sec AS NVARCHAR) + ' seconds';
+		PRINT '-- SUCCESS ' + CAST(@rows_loaded AS NVARCHAR) + ' rows loaded into  gold.dim_agency_city';
+
+		PRINT '---------------------------------------';
+		PRINT ' === LOAD LOGS INTO gold.load_logs';
+		PRINT '---------------------------------------';
+		
+		INSERT INTO gold.load_logs (table_name, source_name, number_of_rows, duration_seconds, status)
+		VALUES(' gold.dim_agency_city', 'silver.ito', @rows_loaded, @duration_sec, 'SUCCESS');
+	END TRY
+	BEGIN CATCH
+		PRINT '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<';
+		PRINT 'ERRROR DURING LOAD DATA INTO TABLE  gold.dim_agency_city';
+		PRINT '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<';
+		PRINT 'Error message: ' + ERROR_MESSAGE();
+		PRINT 'Error number: ' + CAST(ERROR_NUMBER() AS NVARCHAR);
+
+		INSERT INTO gold.load_logs (table_name, source_name, number_of_rows, duration_seconds, status, error_message)
+		VALUES(' gold.dim_agency_city', 'silver.ito', 0, @duration_sec, 'ERROR', 'Error: ' + CAST(ERROR_NUMBER() AS NVARCHAR) + ': ' + ERROR_MESSAGE());
 		THROW;
 	END CATCH
 END

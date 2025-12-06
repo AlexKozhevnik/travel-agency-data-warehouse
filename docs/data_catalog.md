@@ -16,6 +16,16 @@ It consists of **dimension tables** and a **fact table** representing key busine
 
 ---
 
+## 1. `gold.dim_agency_city`
+**Purpose:** Cities where travel agency partners are located.
+
+| Column name | Data Type | Description |
+|-------------|-----------|-------------|
+| agency_city_key | INT | Surrogate key |
+| agency_city_name | NVARCHAR(100) | Agency name |
+
+---
+
 ## 2. `gold.dim_cities`
 **Purpose:** Cities where the hotels are located.
 

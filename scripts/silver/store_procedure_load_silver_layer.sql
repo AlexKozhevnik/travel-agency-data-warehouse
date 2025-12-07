@@ -1,3 +1,10 @@
+USE [ItoDataWarehouse]
+GO
+/****** Object:  StoredProcedure [silver].[load_silver]    Script Date: 07.12.2025 12:52:27 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 /*
 Store Procedure: Load Silver Layer (Bronze --> Silver)
 
@@ -139,7 +146,10 @@ BEGIN
 							WHEN CHARINDEX('+', tourists) > 0 THEN LEFT(tourists, CHARINDEX('+', tourists) -1)
 							ELSE TRIM(tourists)
 						END, 'n/a')) AS tourists,
-			status,
+			CASE 
+				WHEN status IN ('New', 'Waiting confirmation') and datediff(day, booked, getdate()) > 60 then 'Cancelled'
+				ELSE status
+			END AS status,
 			ISNULL(ref_number, 'n/a') AS ref_number,
 			CAST(free_cancel_till AS DATE) AS free_cancel_till,
 			ISNULL(netto_price, 0) AS netto_price, 

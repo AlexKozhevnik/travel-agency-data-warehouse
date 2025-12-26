@@ -1,3 +1,10 @@
+USE [ItoDataWarehouse]
+GO
+/****** Object:  StoredProcedure [gold].[load_gold]    Script Date: 26.12.2025 15:10:53 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER   PROCEDURE [gold].[load_gold] AS
 BEGIN
 	DECLARE	@start_time DATETIME, @end_time DATETIME;
@@ -705,6 +712,7 @@ BEGIN
 			room_key,
 			meal_type_key,
 			agency_key,
+			agency_city_key,
 			customer_key,
 			status_key,
 			manager_key,
@@ -754,6 +762,7 @@ BEGIN
 			ro.room_key,
 			mt.meal_type_key,
 			ag.agency_key,
+			agcity.agency_city_key,
 			cus.customer_key,
 			os.status_key,
 			man.manager_key,
@@ -848,7 +857,9 @@ BEGIN
 		LEFT JOIN gold.dim_date d_da
 		ON sil.due_date = d_da.full_date
 		LEFT JOIN gold.dim_date d_pay
-		ON sil.payment_date = d_pay.full_date) t;
+		ON sil.payment_date = d_pay.full_date
+		LEFT JOIN gold.dim_agency_city agcity
+		ON sil.agency_city = agcity.agency_city_name) t;
 
 		SET @rows_loaded = @@ROWCOUNT;
 		SET @end_time = GETDATE();
